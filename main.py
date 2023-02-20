@@ -9,9 +9,28 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QMainWindow,
     QApplication,
+    QTableWidget,
+    QTableWidgetItem,
+    QTableView,
+    QListWidget,
+    QListWidgetItem,
 )
-from PyQt6.QtCore import QSize, Qt, QPoint, QMargins, QEvent
+from PyQt6.QtCore import QSize, Qt, QPoint, QMargins, QEvent, QAbstractTableModel
 from PyQt6.QtGui import QFont, QCursor, QPainter
+
+"""
+TO-DO LIST
+1. Fix found word list to prevent duplicates
+    - make it so words actually show up
+2. Make it so you can't skip around letters
+    - Probably make an attribute for most recent letter and each new letter check all surrounding letters for it
+3. Add points and a total point counter
+4. Decrease hitboxes for letters for seamless diagonal navigation
+5. Draw lines showing path
+6. Calculate point totals of maps (and maybe veto bad ones)
+
+
+"""
 
 
 class Window(QMainWindow):
@@ -29,6 +48,7 @@ class Window(QMainWindow):
         self.setCentralWidget(self.window)
         self.window.setLayout(self.layout)
 
+        self.sanitizeDict()
         self.createBoard()
         self.createSidebar()
 
@@ -42,28 +62,53 @@ class Window(QMainWindow):
             and not widget.property("visited")
             and widget.property("letter")
         ):
-            self.header.setText(self.header.text() + widget.text())
-            widget.setProperty("visited", True)
-            widget.setStyleSheet(
-                widget.styleSheet() + "QLabel { background-color : lightgreen; }"
-            )
+            self.select(widget)
         elif event.type() == QEvent.Type.MouseButtonRelease:
-            self.header.setText("")
-            for widget in self.words.children():
-                if isinstance(widget, QLabel):
-                    widget.setProperty("visited", False)
-                    widget.setStyleSheet(
-                        widget.styleSheet() + "QLabel { background-color : white; }"
-                    )
+            self.deselect()
         return False
 
+    def select(self, widget):
+        self.header.setText(self.header.text() + widget.text())
+        widget.setProperty("visited", True)
+        widget.setStyleSheet(
+            widget.styleSheet() + "QLabel { background-color : lightgreen; }"
+        )
+
+    def deselect(self):
+        word = self.header.text().strip().upper()
+        if word in self.lines:
+            self.table.setItem(self.table.rowCount() - 1, 0, QTableWidgetItem(word))
+            self.table.setItem(
+                self.table.rowCount() - 1,
+                1,
+                QTableWidgetItem(
+                    str((len(word) - 2) * 400),
+                ),
+            )
+            self.table.insertRow(self.table.rowCount())
+
+        self.header.setText("")
+        for widget in self.words.children():
+            if isinstance(widget, QLabel):
+                widget.setProperty("visited", False)
+                widget.setStyleSheet(
+                    widget.styleSheet() + "QLabel { background-color : white; }"
+                )
+
+    def sanitizeDict(self):
+        with open("Collins Scrabble Words (2019).txt") as f:
+            self.lines = []
+            for word in f.readlines():
+                if len(word) > 3 and len(word) < 16:
+                    self.lines.append(word.strip().upper())
+
     def createSidebar(self):
-        a = QLabel()
-        a.setText("sidebar")
-        a.setMinimumSize(QSize(150, 10))
-        a.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet("QLabel { background-color : gray; }")
-        self.layout.addWidget(a)
+        self.table = QTableWidget()
+        self.table.setColumnCount(2)
+        self.table.setRowCount(2)
+        self.table.setItem(0, 0, QTableWidgetItem("Words"))
+        self.table.setItem(0, 1, QTableWidgetItem("Points"))
+        self.layout.addWidget(self.table)
 
     def createBoard(self):
         letters = {
