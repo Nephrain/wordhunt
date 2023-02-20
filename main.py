@@ -55,7 +55,7 @@ class Window(QMainWindow):
                     widget.setStyleSheet(
                         widget.styleSheet() + "QLabel { background-color : white; }"
                     )
-        return True
+        return False
 
     def createSidebar(self):
         a = QLabel()
