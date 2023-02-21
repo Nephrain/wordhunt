@@ -57,12 +57,20 @@ class Window(QMainWindow):
     def eventFilter(self, object, event):
         widget = app.widgetAt(QCursor.pos())
         if (
-            event.type() == QEvent.Type.MouseMove
+            (
+                event.type() == QEvent.Type.MouseMove
+                or event.type() == QEvent.Type.MouseButtonPress
+            )
             and isinstance(widget, QLabel)
             and not widget.property("visited")
             and widget.property("letter")
         ):
-            self.select(widget)
+            local = widget.mapFromGlobal(QCursor.pos())
+            if event.type() == QEvent.Type.MouseButtonPress or (
+                abs(widget.rect().center().x() - local.x()) < 40
+                and abs(widget.rect().center().y() - local.y()) < 40
+            ):
+                self.select(widget)
         elif event.type() == QEvent.Type.MouseButtonRelease:
             self.deselect()
         return False
@@ -78,14 +86,15 @@ class Window(QMainWindow):
         word = self.header.text().strip().upper()
         if word in self.lines:
             self.table.setItem(self.table.rowCount() - 1, 0, QTableWidgetItem(word))
+            item = QTableWidgetItem()
+            item.setData(Qt.ItemDataRole.DisplayRole, (len(word) - 2) * 400)
             self.table.setItem(
                 self.table.rowCount() - 1,
                 1,
-                QTableWidgetItem(
-                    str((len(word) - 2) * 400),
-                ),
+                item,
             )
             self.table.insertRow(self.table.rowCount())
+        self.table.sortItems(1, Qt.SortOrder.DescendingOrder)
 
         self.header.setText("")
         for widget in self.words.children():
@@ -106,9 +115,12 @@ class Window(QMainWindow):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setRowCount(2)
+        self.table.verticalHeader().setVisible(False)
+        self.table.horizontalHeader().setVisible(False)
         self.table.setItem(0, 0, QTableWidgetItem("Words"))
         self.table.setItem(0, 1, QTableWidgetItem("Points"))
         self.layout.addWidget(self.table)
+        self.layout.addStretch()
 
     def createBoard(self):
         letters = {
