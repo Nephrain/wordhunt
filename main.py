@@ -24,8 +24,8 @@ TO-DO LIST
     - make it so words actually show up
 2. Make it so you can't skip around letters
     - Probably make an attribute for most recent letter and each new letter check all surrounding letters for it
-3. Add points and a total point counter
-4. Decrease hitboxes for letters for seamless diagonal navigation
+3. Add points and a total point counter - done
+4. Decrease hitboxes for letters for seamless diagonal navigation - done
 5. Draw lines showing path
 6. Calculate point totals of maps (and maybe veto bad ones)
 
@@ -70,12 +70,15 @@ class Window(QMainWindow):
                 abs(widget.rect().center().x() - local.x()) < 40
                 and abs(widget.rect().center().y() - local.y()) < 40
             ):
-                self.select(widget)
+                self.select(widget, event)
         elif event.type() == QEvent.Type.MouseButtonRelease:
             self.deselect()
         return False
 
-    def select(self, widget):
+    def select(self, widget, event):
+        if event.type() == QEvent.Type.MouseButtonPress:
+            self.header.setText("")
+        self.header.setStyleSheet("QLabel { background-color : gray; }")
         self.header.setText(self.header.text() + widget.text())
         widget.setProperty("visited", True)
         widget.setStyleSheet(
@@ -84,7 +87,12 @@ class Window(QMainWindow):
 
     def deselect(self):
         word = self.header.text().strip().upper()
-        if word in self.lines:
+        if word in self.found:
+            self.header.setStyleSheet(
+                self.header.styleSheet() + "QLabel { background-color : lightgray; } "
+            )
+        elif word in self.lines:
+            self.found.append(word)
             self.table.setItem(self.table.rowCount() - 1, 0, QTableWidgetItem(word))
             item = QTableWidgetItem()
             item.setData(Qt.ItemDataRole.DisplayRole, (len(word) - 2) * 400)
@@ -94,9 +102,15 @@ class Window(QMainWindow):
                 item,
             )
             self.table.insertRow(self.table.rowCount())
+            self.header.setStyleSheet(
+                self.header.styleSheet() + "QLabel { background-color : green; } "
+            )
+        else:
+            self.header.setStyleSheet(
+                self.header.styleSheet() + "QLabel { background-color : red; } "
+            )
         self.table.sortItems(1, Qt.SortOrder.DescendingOrder)
 
-        self.header.setText("")
         for widget in self.words.children():
             if isinstance(widget, QLabel):
                 widget.setProperty("visited", False)
@@ -115,6 +129,7 @@ class Window(QMainWindow):
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setRowCount(2)
+        self.found = []
         self.table.verticalHeader().setVisible(False)
         self.table.horizontalHeader().setVisible(False)
         self.table.setItem(0, 0, QTableWidgetItem("Words"))
@@ -190,7 +205,7 @@ class Window(QMainWindow):
 
         self.header = QLabel()
         self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setStyleSheet("QLabel { background-color : gray; }")
+        self.setStyleSheet("QLabel { font-size: 30px; background-color : gray; }")
         vbox.addWidget(self.header)
         vbox.addWidget(self.words)
 
