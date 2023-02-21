@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
 )
 from PyQt6.QtCore import QSize, Qt, QPoint, QMargins, QEvent, QAbstractTableModel
-from PyQt6.QtGui import QFont, QCursor, QPainter
+from PyQt6.QtGui import QFont, QCursor, QPainter, QFontMetrics
 
 """
 TO-DO LIST
@@ -67,8 +67,8 @@ class Window(QMainWindow):
         ):
             local = widget.mapFromGlobal(QCursor.pos())
             if event.type() == QEvent.Type.MouseButtonPress or (
-                abs(widget.rect().center().x() - local.x()) < 40
-                and abs(widget.rect().center().y() - local.y()) < 40
+                abs(widget.rect().center().x() - local.x()) < 45
+                and abs(widget.rect().center().y() - local.y()) < 45
             ):
                 self.select(widget, event)
         elif event.type() == QEvent.Type.MouseButtonRelease:
@@ -95,7 +95,11 @@ class Window(QMainWindow):
             self.found.append(word)
             self.table.setItem(self.table.rowCount() - 1, 0, QTableWidgetItem(word))
             item = QTableWidgetItem()
-            item.setData(Qt.ItemDataRole.DisplayRole, (len(word) - 2) * 400)
+            points = (len(word) - 2) * 400
+            self.total.setText(
+                "Total points: " + str(int(self.total.text()[14:]) + points)
+            )
+            item.setData(Qt.ItemDataRole.DisplayRole, points)
             self.table.setItem(
                 self.table.rowCount() - 1,
                 1,
@@ -126,6 +130,13 @@ class Window(QMainWindow):
                     self.lines.append(word.strip().upper())
 
     def createSidebar(self):
+        widget = QWidget()
+        vbox = QVBoxLayout()
+        self.total = QLabel()
+        self.total.setText("Total points: 0")
+        self.total.setStyleSheet(
+            "QLabel { background-color: black; border-radius: 10px; font-size: 20px; padding: 5px;}"
+        )
         self.table = QTableWidget()
         self.table.setColumnCount(2)
         self.table.setRowCount(2)
@@ -134,7 +145,10 @@ class Window(QMainWindow):
         self.table.horizontalHeader().setVisible(False)
         self.table.setItem(0, 0, QTableWidgetItem("Words"))
         self.table.setItem(0, 1, QTableWidgetItem("Points"))
-        self.layout.addWidget(self.table)
+        vbox.addWidget(self.table)
+        vbox.addWidget(self.total)
+        widget.setLayout(vbox)
+        self.layout.addWidget(widget)
         self.layout.addStretch()
 
     def createBoard(self):
